@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye for Detail: Spot the Odd One Out</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #121214;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #38bdf8;
+        }
+
+        p {
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            background-color: #1e1e24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-box {
+            font-size: 1.1rem;
+        }
+
+        .stat-box span {
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            background-color: #1e1e24;
+            padding: 15px;
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .tile {
+            background-color: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .tile:hover {
+            transform: scale(1.02);
+        }
+
+        .tile:active {
+            transform: scale(0.95);
+        }
+
+        .btn {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 6px -1px rgba(56, 189, 248, 0.2);
+        }
+
+        .btn:hover {
+            background-color: #7dd3fc;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Message flash animations */
+        .flash-wrong {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Eye for Detail Test</h1>
+        <p>One of these tiles has a slightly different shade. Can you spot it?</p>
+
+        <div class="stats-container">
+            <div class="stat-box">Score: <span id="score">0</span></div>
+            <div class="stat-box">Highest: <span id="high-score">0</span></div>
+            <div class="stat-box">Difficulty: <span id="difficulty-text">Easy</span></div>
+        </div>
+
+        <div id="game-board"></div>
+
+        <button class="btn" id="reset-btn">Reset Game</button>
+    </div>
+
+    <script>
+        const board = document.getElementById('game-board');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('high-score');
+        const difficultyText = document.getElementById('difficulty-text');
+        const resetBtn = document.getElementById('reset-btn');
+
+        const GRID_SIZE = 36; // 6x6 grid
+        let score = 0;
+        let highScore = 0;
+
+        // Dynamic difficulty scaling based on score
+        function getDifficultyDelta() {
+            if (score < 3) return 15;     // Absolute beginner
+            if (score < 6) return 10;     // Easy
+            if (score < 10) return 6;     // Medium
+            if (score < 15) return 4;     // Hard
+            if (score < 20) return 2.5;   // Eagle Eye
+            return 1.5;                   // Master / Almost Impossible
+        }
+
+        function updateDifficultyLabel() {
+            if (score < 3) difficultyText.innerText = "Warm-up";
+            else if (score < 6) difficultyText.innerText = "Easy";
+            else if (score < 10) difficultyText.innerText = "Medium";
+            else if (score < 15) difficultyText.innerText = "Hard";
+            else if (score < 20) difficultyText.innerText = "Eagle Eye";
+            else difficultyText.innerText = "Superhuman";
+        }
+
+        function generateChallenge() {
+            board.innerHTML = '';
+            updateDifficultyLabel();
+
+            // Generate a random base color using HSL for easy nuance manipulation
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = Math.floor(Math.random() * 40) + 40; // 40% to 80%
+            const lightness = Math.floor(Math.random() * 50) + 25;  // 25% to 75%
+            
+            const baseColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+
+            // Determine the subtle shift for the odd tile
+            const delta = getDifficultyDelta();
+            // Randomly decide to make the odd tile lighter or darker
+            const oddLightness = lightness + delta > 85 ? lightness - delta : lightness + delta;
+            const oddColor = `hsl(${hue}, ${saturation}%, ${oddLightness}%)`;
+
+            // Pick a random index for the odd tile
+            const oddTileIndex = Math.floor(Math.random() * GRID_SIZE);
+
+            // Build the grid
+            for (let i = 0; i < GRID_SIZE; i++) {
+                const tile = document.createElement('div');
+                tile.classList.add('tile');
+                
+                if (i === oddTileIndex) {
+                    tile.style.backgroundColor = oddColor;
+                    tile.addEventListener('click', handleCorrectClick);
+                } else {
+                    tile.style.backgroundColor = baseColor;
+                    tile.addEventListener('click', handleWrongClick);
+                }
+                
+                board.appendChild(tile);
+            }
+        }
+
+        function handleCorrectClick() {
+            score++;
+            scoreDisplay.innerText = score;
+            if (score > highScore) {
+                highScore = score;
+                highScoreDisplay.innerText = highScore;
+            }
+            generateChallenge();
+        }
+
+        function handleWrongClick() {
+            // Flash the board to indicate a mistake
+            board.classList.add('flash-wrong');
+            setTimeout(() => board.classList.remove('flash-wrong'), 300);
+            
+            // Penalize score slightly but don't drop below zero
+            score = Math.max(0, score - 1);
+            scoreDisplay.innerText = score;
+        }
+
+        function resetGame() {
+            score = 0;
+            scoreDisplay.innerText = score;
+            generateChallenge();
+        }
+
+        // Event Listeners
+        resetBtn.addEventListener('click', resetGame);
+
+        // Start the game on load
+        generateChallenge();
+    </script>
+</body>
+</html>
