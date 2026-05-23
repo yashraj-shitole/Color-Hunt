@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,7 +26,7 @@
 
         .container {
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
 
@@ -57,6 +58,12 @@
         .stat-box span {
             font-weight: bold;
             color: #38bdf8;
+            transition: color 0.3s ease;
+        }
+
+        /* Red color for low time warning */
+        .time-warning {
+            color: #ef4444 !important;
         }
 
         #game-board {
@@ -69,6 +76,7 @@
             aspect-ratio: 1 / 1;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
             margin-bottom: 20px;
+            position: relative;
         }
 
         .tile {
@@ -84,6 +92,26 @@
 
         .tile:active {
             transform: scale(0.95);
+        }
+
+        .game-over-screen {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #e2e8f0;
+            font-size: 1.5rem;
+            background-color: #1e1e24;
+            border-radius: 12px;
+            height: 100%;
+        }
+
+        .game-over-screen span {
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 2rem;
+            margin: 10px 0;
         }
 
         .btn {
@@ -123,17 +151,18 @@
 
     <div class="container">
         <h1>Eye for Detail Test</h1>
-        <p>One of these tiles has a slightly different shade. Can you spot it?</p>
+        <p>Spot as many slightly different tiles as you can in 1 minute!</p>
 
         <div class="stats-container">
             <div class="stat-box">Score: <span id="score">0</span></div>
             <div class="stat-box">Highest: <span id="high-score">0</span></div>
-            <div class="stat-box">Difficulty: <span id="difficulty-text">Easy</span></div>
+            <div class="stat-box">Difficulty: <span id="difficulty-text">Warm-up</span></div>
+            <div class="stat-box">Time: <span id="time-left">60</span>s</div>
         </div>
 
         <div id="game-board"></div>
 
-        <button class="btn" id="reset-btn">Reset Game</button>
+        <button class="btn" id="reset-btn">Start / Reset Game</button>
     </div>
 
     <script>
@@ -141,32 +170,85 @@
         const scoreDisplay = document.getElementById('score');
         const highScoreDisplay = document.getElementById('high-score');
         const difficultyText = document.getElementById('difficulty-text');
+        const timeDisplay = document.getElementById('time-left');
         const resetBtn = document.getElementById('reset-btn');
 
         const GRID_SIZE = 36; // 6x6 grid
+        const GAME_TIME = 60; // 60 Seconds total game time
         let score = 0;
         let highScore = 0;
+        let timeLeft = GAME_TIME;
+        let timerInterval;
+        let isGameActive = false;
 
         // Dynamic difficulty scaling based on score
         function getDifficultyDelta() {
-            if (score < 3) return 15;     // Absolute beginner
-            if (score < 6) return 10;     // Easy
-            if (score < 10) return 6;     // Medium
-            if (score < 15) return 4;     // Hard
-            if (score < 20) return 2.5;   // Eagle Eye
+            if (score < 5) return 15;     // Absolute beginner
+            if (score < 10) return 10;    // Easy
+            if (score < 15) return 6;     // Medium
+            if (score < 25) return 4;     // Hard
+            if (score < 35) return 2.5;   // Eagle Eye
             return 1.5;                   // Master / Almost Impossible
         }
 
         function updateDifficultyLabel() {
-            if (score < 3) difficultyText.innerText = "Warm-up";
-            else if (score < 6) difficultyText.innerText = "Easy";
-            else if (score < 10) difficultyText.innerText = "Medium";
-            else if (score < 15) difficultyText.innerText = "Hard";
-            else if (score < 20) difficultyText.innerText = "Eagle Eye";
+            if (score < 5) difficultyText.innerText = "Warm-up";
+            else if (score < 10) difficultyText.innerText = "Easy";
+            else if (score < 15) difficultyText.innerText = "Medium";
+            else if (score < 25) difficultyText.innerText = "Hard";
+            else if (score < 35) difficultyText.innerText = "Eagle Eye";
             else difficultyText.innerText = "Superhuman";
         }
 
+        function startGame() {
+            // Reset variables
+            score = 0;
+            timeLeft = GAME_TIME;
+            isGameActive = true;
+            
+            // Update UI
+            scoreDisplay.innerText = score;
+            timeDisplay.innerText = timeLeft;
+            timeDisplay.classList.remove('time-warning');
+            
+            // Clear any existing timer
+            clearInterval(timerInterval);
+
+            // Start countdown
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.innerText = timeLeft;
+
+                // Add red warning color when 10 seconds or less remain
+                if (timeLeft <= 10) {
+                    timeDisplay.classList.add('time-warning');
+                }
+
+                // Handle timeout
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            generateChallenge();
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            isGameActive = false;
+            
+            board.innerHTML = `
+                <div class="game-over-screen">
+                    <div>Time's Up!</div>
+                    <div>Your Final Score: <span>${score}</span></div>
+                    <div style="font-size: 1rem; color: #94a3b8; margin-top: 10px;">Click 'Start / Reset Game' to play again</div>
+                </div>
+            `;
+        }
+
         function generateChallenge() {
+            if (!isGameActive) return;
+            
             board.innerHTML = '';
             updateDifficultyLabel();
 
@@ -204,6 +286,8 @@
         }
 
         function handleCorrectClick() {
+            if (!isGameActive) return;
+            
             score++;
             scoreDisplay.innerText = score;
             if (score > highScore) {
@@ -214,6 +298,8 @@
         }
 
         function handleWrongClick() {
+            if (!isGameActive) return;
+
             // Flash the board to indicate a mistake
             board.classList.add('flash-wrong');
             setTimeout(() => board.classList.remove('flash-wrong'), 300);
@@ -221,19 +307,14 @@
             // Penalize score slightly but don't drop below zero
             score = Math.max(0, score - 1);
             scoreDisplay.innerText = score;
-        }
-
-        function resetGame() {
-            score = 0;
-            scoreDisplay.innerText = score;
-            generateChallenge();
+            updateDifficultyLabel();
         }
 
         // Event Listeners
-        resetBtn.addEventListener('click', resetGame);
+        resetBtn.addEventListener('click', startGame);
 
-        // Start the game on load
-        generateChallenge();
+        // Start the game immediately on load
+        startGame();
     </script>
 </body>
 </html>
